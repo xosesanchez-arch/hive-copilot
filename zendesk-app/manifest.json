@@ -1,0 +1,31 @@
+{
+  "name": "Hive Copilot",
+  "author": {
+    "name": "Hive Technologies",
+    "email": "support@hive.com",
+    "url": "https://hive.com"
+  },
+  "defaultLocale": "en",
+  "private": true,
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "assets/index.html",
+        "autoLoad": true,
+        "flexible": true
+      }
+    }
+  },
+  "parameters": [
+    {
+      "name": "apiEndpoint",
+      "type": "text",
+      "required": true,
+      "secure": true,
+      "default": "https://your-vercel-app.vercel.app"
+    }
+  ],
+  "domainWhitelist": []
+}

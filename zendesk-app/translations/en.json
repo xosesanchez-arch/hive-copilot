@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Hive Copilot",
+    "short_description": "AI-powered agent assistant",
+    "long_description": "Get AI-generated summaries, next steps, and suggested responses based on your SOPs and documentation.",
+    "installation_instructions": "Enter your Vercel API endpoint URL in the settings."
+  },
+  "loading": "Analyzing ticket...",
+  "error": "Something went wrong. Please try again.",
+  "summary": "Summary",
+  "nextSteps": "Next Steps",
+  "suggestedResponse": "Suggested Response",
+  "sources": "Sources",
+  "insertResponse": "Insert Response",
+  "regenerate": "Regenerate",
+  "askFollowUp": "Ask a follow-up question...",
+  "send": "Send",
+  "noSources": "No sources found"
+}

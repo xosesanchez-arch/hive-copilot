@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Analyzing ticket...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="error hidden">
+      <p class="error-message"></p>
+      <button id="retry-btn" class="btn btn-secondary">Try Again</button>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content" class="content hidden">
+      <!-- Summary Section -->
+      <section class="section">
+        <h3 class="section-title">Summary</h3>
+        <div id="summary" class="section-content"></div>
+      </section>
+
+      <!-- Next Steps Section -->
+      <section class="section">
+        <h3 class="section-title">Next Steps</h3>
+        <div id="next-steps" class="section-content"></div>
+      </section>
+
+      <!-- Suggested Response Section -->
+      <section class="section">
+        <h3 class="section-title">Suggested Response</h3>
+        <div id="suggested-response" class="section-content response-box"></div>
+        <button id="insert-btn" class="btn btn-primary">Insert Response</button>
+      </section>
+
+      <!-- Sources Section -->
+      <section class="section">
+        <h3 class="section-title collapsible" id="sources-toggle">
+          Sources
+          <span class="toggle-icon">+</span>
+        </h3>
+        <div id="sources" class="section-content sources-list collapsed"></div>
+      </section>
+
+      <!-- Chat Section -->
+      <section class="section chat-section">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-container">
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="Ask a follow-up question..."
+            class="chat-input"
+          >
+          <button id="send-btn" class="btn btn-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Regenerate Button -->
+      <button id="regenerate-btn" class="btn btn-secondary btn-full">Regenerate</button>
+    </div>
+  </div>
+
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

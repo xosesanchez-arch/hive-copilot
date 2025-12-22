@@ -1,0 +1,15 @@
+{
+  "name": "hive-copilot",
+  "version": "1.0.0",
+  "description": "Zendesk Agent Copilot powered by Notion + OpenAI",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.14",
+    "openai": "^4.24.0",
+    "vercel": "^50.1.3"
+  }
+}
