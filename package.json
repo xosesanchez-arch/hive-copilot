@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@notionhq/client": "^2.2.14",
+    "@vercel/kv": "^2.0.0",
     "openai": "^4.24.0",
     "vercel": "^50.1.3"
   }

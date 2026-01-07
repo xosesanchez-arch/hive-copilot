@@ -7,8 +7,9 @@
   },
   "defaultLocale": "en",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "frameworkVersion": "2.0",
+  "singleInstall": true,
   "location": {
     "support": {
       "ticket_sidebar": {
@@ -23,9 +24,9 @@
       "name": "apiEndpoint",
       "type": "text",
       "required": true,
-      "secure": true,
-      "default": "https://your-vercel-app.vercel.app"
+      "secure": false,
+      "default": "https://hive-copilot.vercel.app"
     }
   ],
-  "domainWhitelist": []
+  "domainWhitelist": ["hive-copilot.vercel.app"]
 }

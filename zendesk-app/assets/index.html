@@ -8,6 +8,12 @@
 </head>
 <body>
   <div id="app">
+    <!-- Tab Navigation (visible for admins) -->
+    <div id="tab-nav" class="tab-nav hidden">
+      <button id="tab-copilot" class="tab-btn active">Copilot</button>
+      <button id="tab-admin" class="tab-btn">Admin</button>
+    </div>
+
     <!-- Loading State -->
     <div id="loading" class="loading">
       <div class="spinner"></div>
@@ -36,9 +42,25 @@
 
       <!-- Suggested Response Section -->
       <section class="section">
-        <h3 class="section-title">Suggested Response</h3>
+        <h3 class="section-title">Suggested Response <span class="keyboard-hint">⌘ Enter</span></h3>
         <div id="suggested-response" class="section-content response-box"></div>
-        <button id="insert-btn" class="btn btn-primary">Insert Response</button>
+        <div class="response-actions">
+          <button id="insert-btn" class="btn btn-primary">Insert Response</button>
+          <!-- Feedback Section (visible only for contributors/admins) -->
+          <div id="feedback-section" class="feedback-section hidden">
+            <span class="feedback-label">Rate this response:</span>
+            <button id="feedback-thumbs-up" class="btn-feedback" title="Good response">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
+              </svg>
+            </button>
+            <button id="feedback-thumbs-down" class="btn-feedback" title="Needs improvement">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- Sources Section -->
@@ -70,6 +92,89 @@
 
       <!-- Regenerate Button -->
       <button id="regenerate-btn" class="btn btn-secondary btn-full">Regenerate</button>
+    </div>
+
+    <!-- Admin Panel (visible only for admins) -->
+    <div id="admin-panel" class="admin-panel hidden">
+      <!-- Insight Gathering Section -->
+      <section class="section">
+        <h3 class="section-title">Insight Gathering</h3>
+        <div class="section-content">
+          <p class="admin-description">Analyze agent feedback and generate improvement insights.</p>
+          <div class="admin-actions">
+            <button id="trigger-insights-btn" class="btn btn-primary">
+              <span class="btn-text">Generate Insights</span>
+              <span class="btn-loading hidden">Running...</span>
+            </button>
+          </div>
+          <div id="insights-result" class="insights-result hidden">
+            <div class="insights-stats"></div>
+            <div class="insights-content"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Insight Versions Section -->
+      <section class="section">
+        <h3 class="section-title collapsible" id="versions-toggle">
+          Insight Versions
+          <span class="toggle-icon">+</span>
+        </h3>
+        <div id="versions-list" class="section-content collapsed">
+          <p class="loading-text">Loading versions...</p>
+        </div>
+      </section>
+
+      <!-- User Management Section -->
+      <section class="section">
+        <h3 class="section-title collapsible" id="users-toggle">
+          User Management
+          <span class="toggle-icon">+</span>
+        </h3>
+        <div id="users-list" class="section-content collapsed">
+          <p class="loading-text">Loading users...</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>What could be improved?</h3>
+        <button id="modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="issue-type">Issue type:</label>
+          <select id="issue-type" class="form-select">
+            <option value="">Select an issue...</option>
+            <option value="tone">Tone - Response tone doesn't match situation</option>
+            <option value="accuracy">Accuracy - Information is incorrect</option>
+            <option value="missing">Missing info - Important details are missing</option>
+            <option value="procedure">Wrong procedure - Doesn't follow our SOPs</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="feedback-wrong">What was wrong:</label>
+          <textarea id="feedback-wrong" class="form-textarea" rows="2" placeholder="Describe the issue..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="feedback-improve">How it should be improved:</label>
+          <textarea id="feedback-improve" class="form-textarea" rows="2" placeholder="Suggest improvements..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="feedback-example">Example of better response (optional):</label>
+          <textarea id="feedback-example" class="form-textarea" rows="2" placeholder="Write an example..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="modal-submit" class="btn btn-primary">Submit Feedback</button>
+      </div>
     </div>
   </div>
 

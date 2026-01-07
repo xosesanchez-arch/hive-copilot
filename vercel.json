@@ -1,8 +1,8 @@
 {
   "version": 2,
   "functions": {
-    "api/*.js": {
-      "maxDuration": 30
+    "api/**/*.js": {
+      "maxDuration": 60
     }
   },
   "headers": [
@@ -13,6 +13,12 @@
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/analytics?action=weekly-review",
+      "schedule": "0 6 * * 6"
     }
   ]
 }
