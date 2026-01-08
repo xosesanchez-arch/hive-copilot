@@ -1014,6 +1014,18 @@
 
   function openFeedbackModal() {
     if (feedbackModal) {
+      // Position the popover below the thumbs down button
+      const thumbsDownBtn = document.getElementById("feedback-thumbs-down");
+      if (thumbsDownBtn) {
+        const btnRect = thumbsDownBtn.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Position below the button with a small gap
+        feedbackModal.style.top = (btnRect.bottom + scrollTop + 8) + "px";
+        feedbackModal.style.right = "12px";
+        feedbackModal.style.left = "auto";
+      }
+
       feedbackModal.classList.remove("hidden");
     }
   }

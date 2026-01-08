@@ -477,37 +477,56 @@ body {
   color: var(--hive-dark);
 }
 
-/* Modal Styles */
+/* Modal/Popover Styles */
 .modal {
+  position: absolute;
+  z-index: 1000;
+}
+
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: transparent;
 }
 
 .modal-content {
   position: relative;
   background: #fff;
   border-radius: 8px;
-  width: 90%;
-  max-width: 400px;
-  max-height: 90%;
+  width: calc(100vw - 24px);
+  max-width: 350px;
+  max-height: 400px;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e7eb;
+}
+
+/* Popover arrow */
+.modal-content::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #e5e7eb;
+}
+
+.modal-content::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 25px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid #fff;
 }
 
 .modal-header {
