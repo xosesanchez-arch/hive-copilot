@@ -188,7 +188,6 @@
       try {
         const ticketResp = await client.request({ url: `/api/v2/tickets/${ticketId}.json`, type: "GET" });
         const rawFields = ticketResp.ticket?.custom_fields || [];
-        console.log("Raw custom_fields from API:", rawFields.filter(f => f.value !== null));
         for (const field of rawFields) {
           const key = CUSTOM_FIELD_MAP[String(field.id)];
           if (key && field.value && !customFields[key]) {
