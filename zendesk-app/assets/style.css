@@ -122,6 +122,28 @@ body {
     border-color: #4b5563;
     color: #e5e7eb;
   }
+
+  .btn-translation {
+    background: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
+  }
+
+  .btn-translation:hover {
+    background: var(--hive-yellow);
+    border-color: var(--hive-yellow);
+    color: var(--hive-dark);
+  }
+
+  .btn-chat-translation {
+    background: #4b5563;
+    color: #9ca3af;
+  }
+
+  .btn-chat-translation:hover {
+    background: #6b7280;
+    color: #e5e7eb;
+  }
 }
 
 /* Loading State */
@@ -806,4 +828,58 @@ body {
   font-size: 12px;
   color: #6b7280;
   font-style: italic;
+}
+
+/* Translation Toggle Button */
+.btn-translation {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.btn-translation:hover {
+  background: var(--hive-yellow);
+  border-color: var(--hive-yellow);
+  color: var(--hive-dark);
+}
+
+/* Translation Status */
+.translation-status {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Chat Message Actions Container */
+.chat-message-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+/* Chat Translation Button */
+.btn-chat-translation {
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #e5e7eb;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #6b7280;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.btn-chat-translation:hover {
+  background: #d1d5db;
+  color: var(--hive-dark);
 }

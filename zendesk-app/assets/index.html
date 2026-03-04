@@ -42,8 +42,12 @@
 
       <!-- Suggested Response Section -->
       <section class="section">
-        <h3 class="section-title">Suggested Response <span class="keyboard-hint">⌘ Enter</span></h3>
+        <h3 class="section-title">
+          Suggested Response <span class="keyboard-hint">⌘ Enter</span>
+          <button id="translation-toggle" class="btn-translation hidden">Show English</button>
+        </h3>
         <div id="suggested-response" class="section-content response-box"></div>
+        <div id="translation-status" class="translation-status hidden"></div>
         <div class="response-actions">
           <button id="insert-btn" class="btn btn-primary">Insert Response</button>
           <!-- Feedback Section (visible only for contributors/admins) -->

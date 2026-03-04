@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
       detectedLanguage: context.detectedLanguage,
       hasHistory: context.historyContext?.hasRelevantHistory,
       improvementsVersion: context.improvementsVersion,
+      hasEntityContext: !!context.entityContext,
     });
 
     return res.status(200).json({
@@ -55,6 +56,8 @@ module.exports = async function handler(req, res) {
       historyContext: context.historyContext,
       improvementsContext: context.improvementsContext,
       improvementsVersion: context.improvementsVersion,
+      entityContext: context.entityContext,
+      entitySources: context.entitySources,
       combinedContext: context.combinedContext,
       sopSources: context.sopSources,
       faqSources: context.faqSources,
@@ -63,7 +66,8 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     logger.error("Context error", error);
-    return res.status(500).json({
+    const isTimeout = error.name === "TimeoutError" || error.name === "AbortError";
+    return res.status(isTimeout ? 504 : 500).json({
       error: "Failed to assemble context",
       message: error.message,
       debug: logger.getDebug(),

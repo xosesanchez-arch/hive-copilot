@@ -21,6 +21,13 @@
   let isLoading = false; // Prevent double-clicks
   let cachedMacros = null; // Cache macros (they rarely change)
 
+  // Translation state
+  let detectedLanguage = "en";
+  let mainResponseTranslation = null; // null | "loading" | string
+  let mainResponseOriginal = "";
+  let showingMainTranslation = false;
+  let chatTranslations = new Map(); // messageIndex -> { translation, showing, original }
+
   // DOM Elements
   const loadingEl = document.getElementById("loading");
   const errorEl = document.getElementById("error");
@@ -106,7 +113,7 @@
       const zendeskRole = data["currentUser.role"] || "";
 
       // Fetch user role from our API
-      const response = await fetch(`${apiEndpoint}/api/users/role?email=${encodeURIComponent(agentEmail)}`);
+      const response = await fetch(`${apiEndpoint}/api/users?resource=role&email=${encodeURIComponent(agentEmail)}`);
       if (response.ok) {
         const roleData = await response.json();
         agentRole = roleData.role || "viewer";
@@ -129,6 +136,20 @@
       agentRole = "viewer";
     }
   }
+
+  // Field ID → customFields key mapping
+  // ZAF ticket.customField: syntax only works with text keys, not numeric IDs.
+  // We fetch custom_fields via the REST API instead and map by ID.
+  const CUSTOM_FIELD_MAP = {
+    "360019030218": "hive_order_id",   // Hive Order ID (newer)
+    "360022163557": "hive_order_id",   // Hive Order ID (older, fallback)
+    "360019189777": "shop_order_id",
+    "9598477582365": "hive_shipment_id",
+    "18139543478429": "hive_return_id",
+    "6154031774237": "restocking_shipment_id",
+    "6153994047645": "kitting_id",
+    "28388828319773": "freight_request_id",
+  };
 
   // Fetch ticket data from Zendesk
   async function loadTicketData() {
@@ -160,18 +181,38 @@
         isInternalNote: comment.public === false
       })).filter(c => c.value);
 
+      // Fetch custom fields via REST API (ZAF ticket.customField: only works with text keys,
+      // but all these fields have key=None in this Zendesk instance)
+      const ticketId = data["ticket.id"];
+      const customFields = { hive_order_id: null, shop_order_id: null, hive_shipment_id: null, hive_return_id: null, restocking_shipment_id: null, kitting_id: null, freight_request_id: null };
+      try {
+        const ticketResp = await client.request({ url: `/api/v2/tickets/${ticketId}.json`, type: "GET" });
+        const rawFields = ticketResp.ticket?.custom_fields || [];
+        console.log("Raw custom_fields from API:", rawFields.filter(f => f.value !== null));
+        for (const field of rawFields) {
+          const key = CUSTOM_FIELD_MAP[String(field.id)];
+          if (key && field.value && !customFields[key]) {
+            customFields[key] = field.value;
+          }
+        }
+      } catch (cfError) {
+        console.error("Could not fetch custom fields via API:", cfError.message, cfError);
+      }
+
       ticketData = {
-        id: data["ticket.id"],
+        id: ticketId,
         subject: data["ticket.subject"],
         status: data["ticket.status"],
         priority: data["ticket.priority"],
         tags: data["ticket.tags"] || [],
         requester: data["ticket.requester"],
         comments: comments,
+        customFields: customFields,
       };
 
       console.log("Ticket data loaded:", ticketData);
       console.log("Total comments:", comments.length);
+      console.log("Custom fields:", customFields);
     } catch (error) {
       console.error("Error loading ticket data:", error);
       throw new Error("Failed to load ticket data");
@@ -263,6 +304,10 @@
     chatHistory = [];
     chatMessagesEl.innerHTML = "";
 
+    // Reset translation state
+    hideTranslationToggle();
+    chatTranslations.clear();
+
     try {
       if (!ticketData || !ticketData.subject) {
         await loadTicketData();
@@ -285,11 +330,16 @@
       });
 
       if (!contextResponse.ok) {
-        throw new Error("Failed to assemble context");
+        const isTimeout = contextResponse.status === 504;
+        throw new Error(isTimeout
+          ? "Context assembly timed out. Please click Regenerate."
+          : "Failed to assemble context. Please click Regenerate."
+        );
       }
 
       const context = await contextResponse.json();
-      console.log("Context assembled:", context.searchQuery);
+      detectedLanguage = context.detectedLanguage || "en";
+      console.log("Context assembled:", context.searchQuery, "Language:", detectedLanguage);
 
       // ============================================
       // PHASE 2: Summary + Next Steps (parallel)
@@ -320,6 +370,7 @@
             ticket: ticketData,
             notionContext: context.notionContext,
             faqContext: context.faqContext,
+            entityContext: context.entityContext || "",
           }),
         }).then(async (res) => {
           if (!res.ok) throw new Error("Failed to generate next steps");
@@ -349,6 +400,7 @@
           macros: macrosForAPI,
           glossaryContext: context.glossaryContext,
           improvementsContext: context.improvementsContext || "",
+          entityContext: context.entityContext || "",
         }),
       });
 
@@ -359,7 +411,14 @@
       const responseData = await responseResult.json();
       const response = stripHtml(responseData.suggestedResponse || "No suggestion available.");
       suggestedResponseEl.textContent = response;
+      mainResponseOriginal = response;
       console.log("Response received and displayed");
+
+      // Start background translation if non-English
+      if (detectedLanguage !== "en") {
+        showTranslationToggle();
+        startBackgroundTranslation(response);
+      }
 
       // Store for chat context
       previousSuggestion = `Summary: ${summaryResult.summary || ""}\n\nNext Steps: ${nextStepsResult.nextSteps || ""}\n\nSuggested Response: ${responseData.suggestedResponse || ""}`;
@@ -564,10 +623,11 @@
   // Track insertion via API for analytics
   async function trackInsertion(suggestedResponse) {
     try {
-      await fetch(`${apiEndpoint}/api/tracking/insert`, {
+      await fetch(`${apiEndpoint}/api/tracking`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "insert",
           ticketId: ticketData?.id,
           suggestedResponse: suggestedResponse,
           agentEmail: agentEmail,
@@ -646,6 +706,7 @@
     const messageEl = document.createElement("div");
     messageEl.className = `chat-message ${role}`;
     const cleanContent = role === "assistant" ? stripHtml(content) : content;
+    const messageIndex = chatMessagesEl.children.length;
 
     if (role === "assistant") {
       const textEl = document.createElement("div");
@@ -653,11 +714,28 @@
       textEl.textContent = cleanContent;
       messageEl.appendChild(textEl);
 
+      const actionsEl = document.createElement("div");
+      actionsEl.className = "chat-message-actions";
+
       const insertBtn = document.createElement("button");
       insertBtn.className = "btn-chat-insert";
       insertBtn.textContent = "Insert";
       insertBtn.onclick = () => insertChatMessage(cleanContent);
-      messageEl.appendChild(insertBtn);
+      actionsEl.appendChild(insertBtn);
+
+      // Add translation button if non-English
+      if (detectedLanguage !== "en") {
+        const translateBtn = document.createElement("button");
+        translateBtn.className = "btn-chat-translation";
+        translateBtn.textContent = "EN";
+        translateBtn.onclick = () => toggleChatTranslation(messageIndex, textEl, translateBtn);
+        actionsEl.appendChild(translateBtn);
+
+        // Start background translation
+        startChatTranslation(messageIndex, cleanContent);
+      }
+
+      messageEl.appendChild(actionsEl);
     } else {
       messageEl.textContent = cleanContent;
     }
@@ -681,6 +759,166 @@
     sourcesEl.classList.toggle("collapsed");
     const icon = sourcesToggle.querySelector(".toggle-icon");
     icon.textContent = sourcesEl.classList.contains("collapsed") ? "+" : "-";
+  }
+
+  // ============================================
+  // Translation Functions
+  // ============================================
+
+  function showTranslationToggle() {
+    const toggleBtn = document.getElementById("translation-toggle");
+    if (toggleBtn) {
+      toggleBtn.classList.remove("hidden");
+      toggleBtn.textContent = "Show English";
+    }
+  }
+
+  function hideTranslationToggle() {
+    const toggleBtn = document.getElementById("translation-toggle");
+    if (toggleBtn) {
+      toggleBtn.classList.add("hidden");
+    }
+    const statusEl = document.getElementById("translation-status");
+    if (statusEl) {
+      statusEl.classList.add("hidden");
+    }
+    mainResponseTranslation = null;
+    showingMainTranslation = false;
+    mainResponseOriginal = "";
+  }
+
+  async function startBackgroundTranslation(text) {
+    mainResponseTranslation = "loading";
+
+    try {
+      const response = await fetch(`${apiEndpoint}/api/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text,
+          sourceLanguage: detectedLanguage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Translation failed");
+      }
+
+      const data = await response.json();
+      mainResponseTranslation = data.translation;
+      console.log("Background translation complete");
+
+      // If user is already waiting to see translation, update display
+      if (showingMainTranslation) {
+        suggestedResponseEl.textContent = mainResponseTranslation;
+        const statusEl = document.getElementById("translation-status");
+        if (statusEl) statusEl.classList.add("hidden");
+      }
+
+    } catch (error) {
+      console.error("Translation error:", error);
+      mainResponseTranslation = null;
+    }
+  }
+
+  function toggleMainTranslation() {
+    const toggleBtn = document.getElementById("translation-toggle");
+    const statusEl = document.getElementById("translation-status");
+
+    if (mainResponseTranslation === "loading") {
+      // Show loading state
+      if (statusEl) {
+        statusEl.classList.remove("hidden");
+        statusEl.innerHTML = '<span class="loading-text">Loading translation...</span>';
+      }
+      showingMainTranslation = true;
+      return;
+    }
+
+    if (mainResponseTranslation === null) {
+      console.log("No translation available");
+      return;
+    }
+
+    if (showingMainTranslation) {
+      // Switch back to original
+      suggestedResponseEl.textContent = mainResponseOriginal;
+      if (toggleBtn) toggleBtn.textContent = "Show English";
+      showingMainTranslation = false;
+    } else {
+      // Show translation
+      suggestedResponseEl.textContent = mainResponseTranslation;
+      if (toggleBtn) toggleBtn.textContent = "Show Original";
+      showingMainTranslation = true;
+    }
+
+    if (statusEl) statusEl.classList.add("hidden");
+  }
+
+  async function startChatTranslation(messageIndex, text) {
+    chatTranslations.set(messageIndex, { translation: "loading", showing: false, original: text });
+
+    try {
+      const response = await fetch(`${apiEndpoint}/api/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text,
+          sourceLanguage: detectedLanguage,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Translation failed");
+
+      const data = await response.json();
+      const entry = chatTranslations.get(messageIndex);
+      if (entry) {
+        entry.translation = data.translation;
+        // If user was waiting, update display
+        if (entry.showing && entry.textEl) {
+          entry.textEl.textContent = entry.translation;
+        }
+      }
+
+    } catch (error) {
+      console.error("Chat translation error:", error);
+      const entry = chatTranslations.get(messageIndex);
+      if (entry) {
+        entry.translation = null;
+      }
+    }
+  }
+
+  function toggleChatTranslation(messageIndex, textEl, translateBtn) {
+    const entry = chatTranslations.get(messageIndex);
+
+    if (!entry) return;
+
+    // Store textEl reference for async update
+    entry.textEl = textEl;
+
+    if (entry.translation === "loading") {
+      textEl.innerHTML = '<span class="loading-text">Loading translation...</span>';
+      entry.showing = true;
+      return;
+    }
+
+    if (entry.translation === null) {
+      console.log("No translation available for message", messageIndex);
+      return;
+    }
+
+    if (entry.showing) {
+      // Switch back to original
+      textEl.textContent = entry.original;
+      translateBtn.textContent = "EN";
+      entry.showing = false;
+    } else {
+      // Show translation
+      textEl.textContent = entry.translation;
+      translateBtn.textContent = detectedLanguage.toUpperCase();
+      entry.showing = true;
+    }
   }
 
   // UI State helpers
@@ -840,7 +1078,7 @@
         uniqueUsers.map(async (user) => {
           try {
             const roleResponse = await fetch(
-              `${apiEndpoint}/api/users/role?email=${encodeURIComponent(user.email)}`
+              `${apiEndpoint}/api/users?resource=role&email=${encodeURIComponent(user.email)}`
             );
             if (roleResponse.ok) {
               const roleData = await roleResponse.json();
@@ -927,7 +1165,7 @@
   // Update user role
   async function updateUserRole(email, role) {
     try {
-      const response = await fetch(`${apiEndpoint}/api/users/role`, {
+      const response = await fetch(`${apiEndpoint}/api/users?resource=role`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role, adminEmail: agentEmail }),
@@ -989,10 +1227,11 @@
   // Feedback functions
   async function submitPositiveFeedback() {
     try {
-      await fetch(`${apiEndpoint}/api/tracking/feedback`, {
+      await fetch(`${apiEndpoint}/api/tracking`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "feedback",
           ticketId: ticketData?.id,
           userEmail: agentEmail,
           userName: agentName,
@@ -1064,10 +1303,11 @@
     const comment = commentParts.join("\n\n") || "No details provided";
 
     try {
-      await fetch(`${apiEndpoint}/api/tracking/feedback`, {
+      await fetch(`${apiEndpoint}/api/tracking`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "feedback",
           ticketId: ticketData?.id,
           userEmail: agentEmail,
           userName: agentName,
@@ -1101,6 +1341,9 @@
   document.getElementById("retry-btn")?.addEventListener("click", generateResponse);
   document.getElementById("send-btn")?.addEventListener("click", sendChatMessage);
   sourcesToggle?.addEventListener("click", toggleSources);
+
+  // Translation toggle
+  document.getElementById("translation-toggle")?.addEventListener("click", toggleMainTranslation);
 
   // Tab navigation
   tabCopilotBtn?.addEventListener("click", () => switchToTab("copilot"));

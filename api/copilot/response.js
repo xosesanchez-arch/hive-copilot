@@ -36,6 +36,7 @@ module.exports = async function handler(req, res) {
       macros,
       glossaryContext,
       improvementsContext,
+      entityContext,
     } = req.body;
 
     if (!ticket) {
@@ -50,6 +51,7 @@ module.exports = async function handler(req, res) {
       ticketId: ticket.id,
       summaryLength: summary?.length || 0,
       hasContext: !!notionContext || !!faqContext,
+      hasEntityContext: !!entityContext,
     });
 
     const result = await generateResponse(
@@ -62,6 +64,7 @@ module.exports = async function handler(req, res) {
       macros || [],
       glossaryContext || "",
       improvementsContext || "",
+      entityContext || "",
       logger
     );
 

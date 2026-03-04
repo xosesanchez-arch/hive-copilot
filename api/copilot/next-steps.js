@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { ticket, notionContext, faqContext } = req.body;
+    const { ticket, notionContext, faqContext, entityContext } = req.body;
 
     if (!ticket) {
       return res.status(400).json({ error: "Ticket data is required" });
@@ -36,12 +36,14 @@ module.exports = async function handler(req, res) {
       ticketId: ticket.id,
       hasNotionContext: !!notionContext,
       hasFaqContext: !!faqContext,
+      hasEntityContext: !!entityContext,
     });
 
     const result = await generateNextSteps(
       ticket,
       notionContext || "",
       faqContext || "",
+      entityContext || "",
       logger
     );
 
