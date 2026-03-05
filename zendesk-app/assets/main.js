@@ -119,8 +119,6 @@
         agentRole = roleData.role || "viewer";
       }
 
-      console.log("User role:", agentRole, "Zendesk role:", zendeskRole);
-
       // Show feedback section for contributors and admins
       if (feedbackSectionEl && (agentRole === "contributor" || agentRole === "admin")) {
         feedbackSectionEl.classList.remove("hidden");
@@ -209,9 +207,6 @@
         customFields: customFields,
       };
 
-      console.log("Ticket data loaded:", ticketData);
-      console.log("Total comments:", comments.length);
-      console.log("Custom fields:", customFields);
     } catch (error) {
       console.error("Error loading ticket data:", error);
       throw new Error("Failed to load ticket data");
@@ -221,7 +216,6 @@
   // Fetch and cache macros from Zendesk
   async function loadMacros() {
     if (cachedMacros) {
-      console.log("Using cached macros:", cachedMacros.length);
       return cachedMacros;
     }
 
@@ -242,7 +236,6 @@
       });
 
       cachedMacros = macros;
-      console.log("Loaded and cached macros:", macros.length);
       return macros;
     } catch (error) {
       console.error("Error loading macros:", error);
@@ -278,8 +271,6 @@
       ? relevantMacros
       : macros.slice(0, 10);
 
-    console.log(`Sending ${macrosToSend.length} relevant macros (of ${macros.length} total)`);
-
     return macrosToSend.map(m => ({
       id: m.id,
       title: m.title,
@@ -291,7 +282,6 @@
   // Generate copilot response with progressive loading
   async function generateResponse() {
     if (isLoading) {
-      console.log("Already loading, ignoring request");
       return;
     }
 
@@ -315,13 +305,9 @@
       const macros = await loadMacros();
       const macrosForAPI = formatMacrosForAPI(macros, ticketData);
 
-      console.log("Sending ticket to API:", ticketData);
-      console.log("Including macros:", macrosForAPI.length);
-
       // ============================================
       // PHASE 1: Context Assembly
       // ============================================
-      console.log("Phase 1: Assembling context...");
       const contextResponse = await fetch(`${apiEndpoint}/api/copilot/context`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -338,13 +324,9 @@
 
       const context = await contextResponse.json();
       detectedLanguage = context.detectedLanguage || "en";
-      console.log("Context assembled:", context.searchQuery, "Language:", detectedLanguage);
-
       // ============================================
       // PHASE 2: Summary + Next Steps (parallel)
       // ============================================
-      console.log("Phase 2: Generating summary and next steps in parallel...");
-
       const [summaryResult, nextStepsResult] = await Promise.all([
         fetch(`${apiEndpoint}/api/copilot/summary`, {
           method: "POST",
@@ -358,7 +340,6 @@
           const data = await res.json();
           // Update UI immediately when summary arrives
           renderText(summaryEl, data.summary || "No summary available.");
-          console.log("Summary received and displayed");
           return data;
         }),
 
@@ -376,7 +357,6 @@
           const data = await res.json();
           // Update UI immediately when next steps arrive
           renderText(nextStepsEl, data.nextSteps || "No next steps available.");
-          console.log("Next steps received and displayed");
           return data;
         }),
       ]);
@@ -384,8 +364,6 @@
       // ============================================
       // PHASE 3: Response Generation (context chaining)
       // ============================================
-      console.log("Phase 3: Generating response using summary...");
-
       const responseResult = await fetch(`${apiEndpoint}/api/copilot/response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -411,7 +389,6 @@
       const response = stripHtml(responseData.suggestedResponse || "No suggestion available.");
       suggestedResponseEl.textContent = response;
       mainResponseOriginal = response;
-      console.log("Response received and displayed");
 
       // Start background translation if non-English
       if (detectedLanguage !== "en") {
@@ -633,7 +610,6 @@
           agentName: agentName,
         }),
       });
-      console.log("Insertion tracked for ticket:", ticketData?.id);
     } catch (error) {
       console.error("Error tracking insertion:", error);
     }
@@ -678,13 +654,6 @@
       }
 
       const data = await response.json();
-
-      if (data.debug) {
-        console.group(`💬 Chat Debug [${data.debug.requestId}]`);
-        console.log("Timing:", data.debug.timing);
-        console.table(data.debug.logs);
-        console.groupEnd();
-      }
 
       addChatMessage(data.response, "assistant");
 
@@ -805,7 +774,6 @@
 
       const data = await response.json();
       mainResponseTranslation = data.translation;
-      console.log("Background translation complete");
 
       // If user is already waiting to see translation, update display
       if (showingMainTranslation) {
@@ -835,7 +803,6 @@
     }
 
     if (mainResponseTranslation === null) {
-      console.log("No translation available");
       return;
     }
 
@@ -903,7 +870,6 @@
     }
 
     if (entry.translation === null) {
-      console.log("No translation available for message", messageIndex);
       return;
     }
 
@@ -1065,8 +1031,6 @@
         index === self.findIndex(u => u.email === user.email)
       );
 
-      console.log("Fetched Zendesk team members:", uniqueUsers.length);
-
       if (uniqueUsers.length === 0) {
         usersListEl.innerHTML = "<p>No team members found.</p>";
         return;
@@ -1084,7 +1048,7 @@
               return { ...user, copilotRole: roleData.role || "agent" };
             }
           } catch (e) {
-            console.log(`Could not fetch role for ${user.email}:`, e);
+            console.error(`Could not fetch role for ${user.email}:`, e);
           }
           return { ...user, copilotRole: "agent" }; // Default to agent
         })
@@ -1154,7 +1118,6 @@
         usersListEl.appendChild(item);
       });
 
-      console.log("Users list rendered with", usersWithRoles.length, "members");
     } catch (error) {
       console.error("Error loading users:", error);
       usersListEl.innerHTML = "<p>Failed to load team members.</p>";
@@ -1170,7 +1133,6 @@
         body: JSON.stringify({ email, role, adminEmail: agentEmail }),
       });
       if (!response.ok) throw new Error("Failed to update role");
-      console.log(`Updated ${email} to ${role}`);
     } catch (error) {
       console.error("Error updating role:", error);
       alert("Failed to update user role");
@@ -1244,7 +1206,6 @@
         thumbsUp.classList.add("selected");
         setTimeout(() => thumbsUp.classList.remove("selected"), 1000);
       }
-      console.log("Positive feedback submitted");
     } catch (error) {
       console.error("Error submitting feedback:", error);
     }
@@ -1317,7 +1278,6 @@
       });
 
       closeFeedbackModal();
-      console.log("Negative feedback submitted");
     } catch (error) {
       console.error("Error submitting feedback:", error);
       alert("Failed to submit feedback");
